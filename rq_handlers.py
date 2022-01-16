@@ -1,32 +1,35 @@
 import sys
-from urlparse import urlparse
+from urllib.parse import urlparse
 import select
 import socket
 
 RECV_BS = 4096
 TIME_OUT = 5
 
-bad_urls = [ 'googleads.g.doubleclick.net', 
-            'pagead2.googlesyndication.com',
-            'tpc.googlesyndication.com',
-            '94.198.53.135/b',
-            'http://mh8.adriver.ru/images',
-            'ad.adriver.ru/cgi-bin',
-            'mg.dt00.net',
-            '195.82.146.52/468x60/',
-            '195.82.146.52/iframe',
-            'imdj.3793369.pix-cdn.org/image/banner/',
-            'imgg.marketgid.com',
-            'c.marketgid.com',
-            'ag-gb.marketgid.com',
-
-            'www.olimpru.com',
-            '195.82.146.52/728x90/0618_1.gif',
-
-
+bad_urls = [
+   'googleads.g.doubleclick.net', 
+   'pagead2.googlesyndication.com',
+   'tpc.googlesyndication.com',
+   '94.198.53.135/b',
+   'www.google.com',
+    'googleads.g.doubleclick.net',
+    'youtube.com/pagead',
+    'ade.googlesyndication.com',
+    'youtube.com',
+   'http://mh8.adriver.ru/images',
+   'ad.adriver.ru/cgi-bin',
+   'mg.dt00.net',
+   '195.82.146.52/468x60/',
+   '195.82.146.52/iframe',
+   'imdj.3793369.pix-cdn.org/image/banner/',
+   'imgg.marketgid.com',
+   'c.marketgid.com',
+   'ag-gb.marketgid.com',
+   'www.olimpru.com',
+   '195.82.146.52/728x90/0618_1.gif',
 ]
 
-filtered_message = '''
+filtered_message = b'''
 <html>
 <head>
 </head>
@@ -37,9 +40,7 @@ filtered_message = '''
 '''
 
 
-def get_request(client_socket, raw_http):
-    print raw_http.split('\n')[0]
-
+def get_request(client_socket: socket, raw_http: str):
     # Get host and port.
     request_uri = raw_http.split('\n')[0].split(' ')[1]
     port = 80
@@ -50,7 +51,8 @@ def get_request(client_socket, raw_http):
     #### Check for bad urls ####
     for a_url in bad_urls:
         if a_url in request_uri:
-            print "\n[FILTERED]\n"
+            print(url, 'url----------\n\n\n\n\n\n')
+            print ("\n[FILTERED]\n")
             client_socket.sendall(filtered_message)
             client_socket.close()
             return
@@ -67,7 +69,7 @@ def get_request(client_socket, raw_http):
     # Connection.
     proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     proxy_socket.connect((url.netloc, port))
-    proxy_socket.sendall(raw_http)
+    proxy_socket.sendall(raw_http.encode('ascii'))
 
     cur_sockets = [proxy_socket, client_socket]
 
@@ -89,16 +91,16 @@ def get_request(client_socket, raw_http):
             else:
                 # Show http response.
                 if rq_count == 0: 
-                    print data.split('\n')[0]
+                    print (data.decode('ascii').split('\n')[0])
                     rq_count += 1
 
                 # Read/Write
                 if sock is proxy_socket:
-                    print "<= [%d]" % len(data)
+                    print ("<= [%d]" % len(data))
                     client_socket.sendall(data)
 
                 else:
-                    print "=> [%d]" % len(data)
+                    print ("=> [%d]" % len(data))
                     proxy_socket.sendall(data)
 
 
@@ -108,7 +110,7 @@ def get_request(client_socket, raw_http):
 def connect_request(client_socket, raw_http):
     request_line = raw_http.split('\n')[0]
 
-    print request_line
+    print (request_line)
 
     host = request_line.split(' ')[1].split(':')[0]
     port = int(request_line.split(' ')[1].split(':')[1])
@@ -116,7 +118,7 @@ def connect_request(client_socket, raw_http):
     proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     proxy_socket.connect((host, port))
 
-    client_socket.sendall("HTTP/1.0 200 Connection established\r\nProxy-agent: proxy2.py\r\n\r\n")
+    client_socket.sendall(b"HTTP/1.0 200 Connection established\r\nProxy-agent: proxy2.py\r\n\r\n")
 
     cur_sockets = [proxy_socket, client_socket]
 
@@ -145,17 +147,17 @@ def connect_request(client_socket, raw_http):
 
                 # Read/Write
                 if sock is proxy_socket:
-                    print "<= [%d]" % len(data)
+                    print ("<= [%d]" % len(data))
                     client_socket.sendall(data)
 
                 else:
-                    print "=> [%d]" % len(data)
+                    print ("=> [%d]" % len(data))
                     proxy_socket.sendall(data)
 
     client_socket.close()
 
 def unknown_request(client_socket, raw_http):
-    print "[*** NOT IMPLEMENTED ***]\n%s" % raw_http
+    print ("[*** NOT IMPLEMENTED ***]\n%s") % raw_http
     client_socket.sendall('HTTP/1.1 501 Not Implemented\r\n\r\n')
     client_socket.close()
 
